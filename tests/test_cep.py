@@ -251,14 +251,14 @@ def _build_exterior_payload(vin: str, field_values: dict[int, int]) -> bytes:
 EXTERIOR_ALL_LOCKED = _build_exterior_payload(
     TEST_VIN,
     {
-        2: 2,   # central_lock: LOCKED
-        3: 2,   # front_left_door: CLOSED
-        4: 2,   # front_right_door: CLOSED
-        5: 2,   # rear_left_door: CLOSED
-        6: 2,   # rear_right_door: CLOSED
-        7: 2,   # front_left_window: CLOSED
-        8: 2,   # front_right_window: CLOSED
-        9: 2,   # rear_left_window: CLOSED
+        2: 2,  # central_lock: LOCKED
+        3: 2,  # front_left_door: CLOSED
+        4: 2,  # front_right_door: CLOSED
+        5: 2,  # rear_left_door: CLOSED
+        6: 2,  # rear_right_door: CLOSED
+        7: 2,  # front_left_window: CLOSED
+        8: 2,  # front_right_window: CLOSED
+        9: 2,  # rear_left_window: CLOSED
         10: 2,  # rear_right_window: CLOSED
         11: 2,  # hood: CLOSED
         12: 2,  # tailgate: CLOSED
@@ -271,14 +271,14 @@ EXTERIOR_ALL_LOCKED = _build_exterior_payload(
 EXTERIOR_MIXED = _build_exterior_payload(
     TEST_VIN,
     {
-        2: 1,   # central_lock: UNLOCKED
-        3: 1,   # front_left_door: OPEN
-        4: 3,   # front_right_door: AJAR
-        5: 2,   # rear_left_door: CLOSED
-        6: 2,   # rear_right_door: CLOSED
-        7: 1,   # front_left_window: OPEN
-        8: 2,   # front_right_window: CLOSED
-        9: 2,   # rear_left_window: CLOSED
+        2: 1,  # central_lock: UNLOCKED
+        3: 1,  # front_left_door: OPEN
+        4: 3,  # front_right_door: AJAR
+        5: 2,  # rear_left_door: CLOSED
+        6: 2,  # rear_right_door: CLOSED
+        7: 1,  # front_left_window: OPEN
+        8: 2,  # front_right_window: CLOSED
+        9: 2,  # rear_left_window: CLOSED
         10: 2,  # rear_right_window: CLOSED
         11: 2,  # hood: CLOSED
         12: 1,  # tailgate: OPEN

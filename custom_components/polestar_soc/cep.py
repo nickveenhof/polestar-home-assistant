@@ -35,9 +35,7 @@ _METHOD_GET_CLIMATE = (
     ".ParkingClimatizationService/GetLatestParkingClimatization"
 )
 _METHOD_GET_BATTERY = "/services.vehiclestates.battery.BatteryService/GetLatestBattery"
-_METHOD_GET_EXTERIOR = (
-    "/services.vehiclestates.exterior.ExteriorService/GetLatestExterior"
-)
+_METHOD_GET_EXTERIOR = "/services.vehiclestates.exterior.ExteriorService/GetLatestExterior"
 _METHOD_GET_LOCATION = "/dtlinternet.DtlInternetService/GetLastKnownLocation"
 
 # BatteryState field numbers captured in raw_fields for debugging.
