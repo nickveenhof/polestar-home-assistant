@@ -24,7 +24,6 @@ from custom_components.polestar_soc.pccs import (
     _build_unlock_request,
     _lock_error_context,
     _parse_charge_timer_response,
-    _parse_invocation_response,
     _parse_set_charge_timer_response,
     _parse_target_soc_response,
 )
@@ -38,6 +37,7 @@ from custom_components.polestar_soc.proto import (
     _get_bool,
     _get_int,
     _get_submessage,
+    _parse_invocation_response,
 )
 
 # ---------------------------------------------------------------------------
