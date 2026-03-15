@@ -167,12 +167,12 @@ class TestNoneHandling:
 
 class TestDescriptionCounts:
     def test_total_descriptions(self):
-        assert len(BINARY_SENSOR_DESCRIPTIONS) == 14
+        assert len(BINARY_SENSOR_DESCRIPTIONS) == 44
 
     def test_enabled_by_default_count(self):
         enabled = [d for d in BINARY_SENSOR_DESCRIPTIONS if d.entity_registry_enabled_default]
-        assert len(enabled) == 5  # vehicle_available + 4 doors
+        assert len(enabled) == 11  # 5 exterior + 4 tyre warnings + washer fluid + 12V battery
 
     def test_disabled_by_default_count(self):
         disabled = [d for d in BINARY_SENSOR_DESCRIPTIONS if not d.entity_registry_enabled_default]
-        assert len(disabled) == 9  # 4 windows + hood + tailgate + tank_lid + sunroof + alarm
+        assert len(disabled) == 33  # 9 exterior + 3 fluid/oil + 21 light warnings
