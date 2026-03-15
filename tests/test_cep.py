@@ -585,6 +585,17 @@ class TestParseHealthResponse:
         assert result["washer_fluid_level_warning"] is None
         assert result["low_voltage_battery_warning"] is None
 
+    def test_zero_days_to_service_is_not_none(self):
+        """days_to_service=0 should return 0, not None."""
+        payload = _build_health_payload(
+            TEST_VIN,
+            varint_fields={3: 0, 4: 0},
+            float_fields={},
+        )
+        result = _parse_health_response(payload)
+        assert result["days_to_service"] == 0
+        assert result["distance_to_service_km"] == 0
+
     def test_pressure_rounding(self):
         """Verify tyre pressure values are rounded to 1 decimal."""
         payload = _build_health_payload(

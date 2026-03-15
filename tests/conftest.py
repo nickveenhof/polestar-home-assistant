@@ -164,6 +164,52 @@ def sample_availability():
 
 
 @pytest.fixture
+def sample_health():
+    """Return a sample health state dict (as returned by CepClient)."""
+    return {
+        "days_to_service": 180,
+        "distance_to_service_km": 12000,
+        "service_warning": 1,
+        "brake_fluid_level_warning": 1,
+        "engine_coolant_level_warning": 1,
+        "oil_level_warning": 1,
+        "front_left_tyre_pressure_warning": 1,
+        "front_right_tyre_pressure_warning": 1,
+        "rear_left_tyre_pressure_warning": 1,
+        "rear_right_tyre_pressure_warning": 1,
+        "washer_fluid_level_warning": 1,
+        "low_voltage_battery_warning": 1,
+        "front_left_tyre_pressure_kpa": 240.0,
+        "front_right_tyre_pressure_kpa": 240.0,
+        "rear_left_tyre_pressure_kpa": 250.0,
+        "rear_right_tyre_pressure_kpa": 250.0,
+        "front_tyres_reference_pressure_kpa": 240.0,
+        "rear_tyres_reference_pressure_kpa": 250.0,
+        "brake_light_left_warning": 1,
+        "brake_light_center_warning": 1,
+        "brake_light_right_warning": 1,
+        "fog_light_front_warning": 1,
+        "fog_light_rear_warning": 1,
+        "position_light_front_left_warning": 1,
+        "position_light_front_right_warning": 1,
+        "position_light_rear_left_warning": 1,
+        "position_light_rear_right_warning": 1,
+        "high_beam_left_warning": 1,
+        "high_beam_right_warning": 1,
+        "low_beam_left_warning": 1,
+        "low_beam_right_warning": 1,
+        "daytime_running_light_left_warning": 1,
+        "daytime_running_light_right_warning": 1,
+        "turn_indication_front_left_warning": 1,
+        "turn_indication_front_right_warning": 1,
+        "turn_indication_rear_left_warning": 1,
+        "turn_indication_rear_right_warning": 1,
+        "registration_plate_light_warning": 1,
+        "side_mark_lights_warning": 1,
+    }
+
+
+@pytest.fixture
 def sample_coordinator_data(
     sample_vehicle,
     sample_battery,
@@ -173,6 +219,7 @@ def sample_coordinator_data(
     sample_location,
     sample_exterior,
     sample_availability,
+    sample_health,
 ):
     """Return a full coordinator data dict combining all sources."""
     vin = sample_vehicle["vin"]
@@ -190,4 +237,5 @@ def sample_coordinator_data(
         "location": {vin: sample_location},
         "exterior": {vin: sample_exterior},
         "availability": {vin: sample_availability},
+        "health": {vin: sample_health},
     }

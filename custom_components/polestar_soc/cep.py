@@ -357,6 +357,9 @@ def _parse_health_response(data: bytes) -> dict:
     if state is None:
         return empty
 
+    def _int_or_none(field_num: int) -> int | None:
+        return _get_int(state, field_num) if field_num in state else None
+
     def _pressure(field_num: int) -> float | None:
         val = _get_float(state, field_num)
         return round(val, 1) if val is not None else None
@@ -366,8 +369,8 @@ def _parse_health_response(data: bytes) -> dict:
         return val if val else None  # 0 (UNSPECIFIED) → None
 
     result: dict = {
-        "days_to_service": _get_int(state, 3) or None,
-        "distance_to_service_km": _get_int(state, 4) or None,
+        "days_to_service": _int_or_none(3),
+        "distance_to_service_km": _int_or_none(4),
         "service_warning": _warning(5),
         "brake_fluid_level_warning": _warning(6),
         "engine_coolant_level_warning": _warning(7),
