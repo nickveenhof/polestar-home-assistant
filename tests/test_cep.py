@@ -463,20 +463,20 @@ def _build_health_payload(
 HEALTH_FULL = _build_health_payload(
     TEST_VIN,
     varint_fields={
-        3: 180,    # days_to_service
+        3: 180,  # days_to_service
         4: 12000,  # distance_to_service_km
-        5: 1,      # service_warning: NO_WARNING
-        6: 1,      # brake_fluid_level_warning: NO_WARNING
-        7: 1,      # engine_coolant_level_warning: NO_WARNING
-        8: 1,      # oil_level_warning: NO_WARNING
-        9: 1,      # front_left_tyre_pressure_warning: NO_WARNING
-        10: 3,     # front_right_tyre_pressure_warning: LOW
-        11: 1,     # rear_left_tyre_pressure_warning: NO_WARNING
-        12: 2,     # rear_right_tyre_pressure_warning: VERY_LOW
-        13: 1,     # washer_fluid_level_warning: NO_WARNING
-        14: 1,     # brake_light_left_warning: NO_WARNING
-        15: 2,     # brake_light_center_warning: FAILURE
-        38: 1,     # low_voltage_battery_warning: NO_WARNING
+        5: 1,  # service_warning: NO_WARNING
+        6: 1,  # brake_fluid_level_warning: NO_WARNING
+        7: 1,  # engine_coolant_level_warning: NO_WARNING
+        8: 1,  # oil_level_warning: NO_WARNING
+        9: 1,  # front_left_tyre_pressure_warning: NO_WARNING
+        10: 3,  # front_right_tyre_pressure_warning: LOW
+        11: 1,  # rear_left_tyre_pressure_warning: NO_WARNING
+        12: 2,  # rear_right_tyre_pressure_warning: VERY_LOW
+        13: 1,  # washer_fluid_level_warning: NO_WARNING
+        14: 1,  # brake_light_left_warning: NO_WARNING
+        15: 2,  # brake_light_center_warning: FAILURE
+        38: 1,  # low_voltage_battery_warning: NO_WARNING
     },
     float_fields={
         39: 240.0,  # front_left_tyre_pressure_kpa

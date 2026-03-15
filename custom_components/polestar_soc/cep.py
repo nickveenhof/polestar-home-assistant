@@ -562,9 +562,7 @@ class CepClient:
             response_deserializer=_identity_deserialize,
         )
         try:
-            responses = method(
-                _build_vin_request(vin), metadata=self._metadata(vin), timeout=30
-            )
+            responses = method(_build_vin_request(vin), metadata=self._metadata(vin), timeout=30)
             for response in responses:
                 return _parse_health_response(response)
         except grpc.RpcError as err:
