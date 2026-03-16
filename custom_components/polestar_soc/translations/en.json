@@ -76,6 +76,27 @@
       },
       "unavailable_reason": {
         "name": "Unavailable reason"
+      },
+      "front_left_tyre_pressure": {
+        "name": "Front left tyre pressure"
+      },
+      "front_right_tyre_pressure": {
+        "name": "Front right tyre pressure"
+      },
+      "rear_left_tyre_pressure": {
+        "name": "Rear left tyre pressure"
+      },
+      "rear_right_tyre_pressure": {
+        "name": "Rear right tyre pressure"
+      },
+      "days_to_service": {
+        "name": "Days to service"
+      },
+      "distance_to_service": {
+        "name": "Distance to service"
+      },
+      "service_warning": {
+        "name": "Service warning"
       }
     },
     "number": {
@@ -192,6 +213,96 @@
       },
       "alarm": {
         "name": "Alarm"
+      },
+      "front_left_tyre_pressure_warning": {
+        "name": "Front left tyre pressure warning"
+      },
+      "front_right_tyre_pressure_warning": {
+        "name": "Front right tyre pressure warning"
+      },
+      "rear_left_tyre_pressure_warning": {
+        "name": "Rear left tyre pressure warning"
+      },
+      "rear_right_tyre_pressure_warning": {
+        "name": "Rear right tyre pressure warning"
+      },
+      "washer_fluid_level_warning": {
+        "name": "Washer fluid level"
+      },
+      "low_voltage_battery_warning": {
+        "name": "12V battery"
+      },
+      "brake_fluid_level_warning": {
+        "name": "Brake fluid level"
+      },
+      "engine_coolant_level_warning": {
+        "name": "Engine coolant level"
+      },
+      "oil_level_warning": {
+        "name": "Oil level"
+      },
+      "brake_light_left_warning": {
+        "name": "Brake light left"
+      },
+      "brake_light_center_warning": {
+        "name": "Brake light center"
+      },
+      "brake_light_right_warning": {
+        "name": "Brake light right"
+      },
+      "fog_light_front_warning": {
+        "name": "Fog light front"
+      },
+      "fog_light_rear_warning": {
+        "name": "Fog light rear"
+      },
+      "position_light_front_left_warning": {
+        "name": "Position light front left"
+      },
+      "position_light_front_right_warning": {
+        "name": "Position light front right"
+      },
+      "position_light_rear_left_warning": {
+        "name": "Position light rear left"
+      },
+      "position_light_rear_right_warning": {
+        "name": "Position light rear right"
+      },
+      "high_beam_left_warning": {
+        "name": "High beam left"
+      },
+      "high_beam_right_warning": {
+        "name": "High beam right"
+      },
+      "low_beam_left_warning": {
+        "name": "Low beam left"
+      },
+      "low_beam_right_warning": {
+        "name": "Low beam right"
+      },
+      "daytime_running_light_left_warning": {
+        "name": "Daytime running light left"
+      },
+      "daytime_running_light_right_warning": {
+        "name": "Daytime running light right"
+      },
+      "turn_indication_front_left_warning": {
+        "name": "Turn indicator front left"
+      },
+      "turn_indication_front_right_warning": {
+        "name": "Turn indicator front right"
+      },
+      "turn_indication_rear_left_warning": {
+        "name": "Turn indicator rear left"
+      },
+      "turn_indication_rear_right_warning": {
+        "name": "Turn indicator rear right"
+      },
+      "registration_plate_light_warning": {
+        "name": "Registration plate light"
+      },
+      "side_mark_lights_warning": {
+        "name": "Side marker lights"
       }
     }
   }

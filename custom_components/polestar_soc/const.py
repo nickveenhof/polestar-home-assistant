@@ -144,6 +144,57 @@ USAGE_MODE_MAP: dict[int, str] = {
     7: "Engine off",
 }
 
+# Health service enums (HealthService)
+TYRE_PRESSURE_WARNING_MAP: dict[int, str | None] = {
+    0: None,
+    1: "No warning",
+    2: "Very low",
+    3: "Low",
+    4: "High",
+}
+
+SERVICE_WARNING_MAP: dict[int, str] = {
+    0: "Unknown",
+    1: "No warning",
+    2: "Unknown warning",
+    3: "Almost time for service (regular)",
+    4: "Almost time for service (engine hours)",
+    5: "Almost time for service (distance)",
+    6: "Time for service (regular)",
+    7: "Time for service (engine hours)",
+    8: "Time for service (distance)",
+    9: "Overdue for service (regular)",
+    10: "Overdue for service (engine hours)",
+    11: "Overdue for service (distance)",
+}
+
+OIL_LEVEL_WARNING_MAP: dict[int, str | None] = {
+    0: None,
+    1: "No warning",
+    2: "Service required",
+    3: "Too low",
+    4: "Too high",
+}
+
+FLUID_WARNING_MAP: dict[int, str | None] = {
+    0: None,
+    1: "No warning",
+    2: "Too low",
+    3: "Critically low",  # BrakeFluidLevelWarning only
+}
+
+LOW_VOLTAGE_BATTERY_WARNING_MAP: dict[int, str | None] = {
+    0: None,
+    1: "No warning",
+    2: "Too low",
+}
+
+EXTERIOR_LIGHT_WARNING_MAP: dict[int, str | None] = {
+    0: None,
+    1: "No warning",
+    2: "Failure",
+}
+
 # Weekday enum (ParkingClimateTimer)
 WEEKDAY_MAP: dict[int, str] = {
     1: "Monday",

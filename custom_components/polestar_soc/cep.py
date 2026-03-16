@@ -26,6 +26,7 @@ from .proto import (
     _encode_field_bytes,
     _encode_field_varint,
     _get_double,
+    _get_float,
     _get_int,
     _get_submessage,
     _identity_deserialize,
@@ -45,6 +46,7 @@ _METHOD_GET_EXTERIOR = "/services.vehiclestates.exterior.ExteriorService/GetLate
 _METHOD_GET_AVAILABILITY = (
     "/services.vehiclestates.availability.AvailabilityService/GetLatestAvailability"
 )
+_METHOD_GET_HEALTH = "/services.vehiclestates.health.HealthService/GetHealth"
 _METHOD_GET_LOCATION = "/dtlinternet.DtlInternetService/GetLastKnownLocation"
 _SVC_INVOCATION = "/invocation.InvocationService"
 _METHOD_WINDOW_CONTROL = f"{_SVC_INVOCATION}/WindowControl"
@@ -272,6 +274,126 @@ def _parse_availability_response(data: bytes) -> dict:
     }
 
 
+# Health light warning field numbers → dict keys
+_LIGHT_WARNING_FIELDS: tuple[tuple[int, str], ...] = (
+    (14, "brake_light_left_warning"),
+    (15, "brake_light_center_warning"),
+    (16, "brake_light_right_warning"),
+    (17, "fog_light_front_warning"),
+    (18, "fog_light_rear_warning"),
+    (19, "position_light_front_left_warning"),
+    (20, "position_light_front_right_warning"),
+    (21, "position_light_rear_left_warning"),
+    (22, "position_light_rear_right_warning"),
+    (23, "high_beam_left_warning"),
+    (24, "high_beam_right_warning"),
+    (25, "low_beam_left_warning"),
+    (26, "low_beam_right_warning"),
+    (27, "daytime_running_light_left_warning"),
+    (28, "daytime_running_light_right_warning"),
+    (30, "turn_indication_front_left_warning"),
+    (31, "turn_indication_front_right_warning"),
+    (32, "turn_indication_rear_left_warning"),
+    (33, "turn_indication_rear_right_warning"),
+    (34, "registration_plate_light_warning"),
+    (35, "side_mark_lights_warning"),
+)
+
+
+def _parse_health_response(data: bytes) -> dict:
+    """Parse GetHealth response.
+
+    Two-level decode: outer envelope has field 3 = Health sub-message.
+
+    Health state field mapping:
+        field 3:  days_to_service (int32)
+        field 4:  distance_to_service_km (int32)
+        field 5:  service_warning (ServiceWarning enum)
+        field 6:  brake_fluid_level_warning (enum)
+        field 7:  engine_coolant_level_warning (enum)
+        field 8:  oil_level_warning (enum)
+        field 9:  front_left_tyre_pressure_warning (enum)
+        field 10: front_right_tyre_pressure_warning (enum)
+        field 11: rear_left_tyre_pressure_warning (enum)
+        field 12: rear_right_tyre_pressure_warning (enum)
+        field 13: washer_fluid_level_warning (enum)
+        field 14-35: light warnings (ExteriorLightWarning enum)
+        field 38: low_voltage_battery_warning (enum)
+        field 39: front_left_tyre_pressure_kpa (float/fixed32)
+        field 40: front_right_tyre_pressure_kpa (float/fixed32)
+        field 41: rear_left_tyre_pressure_kpa (float/fixed32)
+        field 42: rear_right_tyre_pressure_kpa (float/fixed32)
+        field 43: front_tyres_reference_pressure_kpa (float/fixed32)
+        field 44: rear_tyres_reference_pressure_kpa (float/fixed32)
+    """
+    empty: dict = {
+        "days_to_service": None,
+        "distance_to_service_km": None,
+        "service_warning": None,
+        "brake_fluid_level_warning": None,
+        "engine_coolant_level_warning": None,
+        "oil_level_warning": None,
+        "front_left_tyre_pressure_warning": None,
+        "front_right_tyre_pressure_warning": None,
+        "rear_left_tyre_pressure_warning": None,
+        "rear_right_tyre_pressure_warning": None,
+        "washer_fluid_level_warning": None,
+        "low_voltage_battery_warning": None,
+        "front_left_tyre_pressure_kpa": None,
+        "front_right_tyre_pressure_kpa": None,
+        "rear_left_tyre_pressure_kpa": None,
+        "rear_right_tyre_pressure_kpa": None,
+        "front_tyres_reference_pressure_kpa": None,
+        "rear_tyres_reference_pressure_kpa": None,
+    }
+    for _, key in _LIGHT_WARNING_FIELDS:
+        empty[key] = None
+
+    if not data:
+        return empty
+
+    outer = _decode_message(data)
+    state = _get_submessage(outer, 3)
+    if state is None:
+        return empty
+
+    def _int_or_none(field_num: int) -> int | None:
+        return _get_int(state, field_num) if field_num in state else None
+
+    def _pressure(field_num: int) -> float | None:
+        val = _get_float(state, field_num)
+        return round(val, 1) if val is not None else None
+
+    def _warning(field_num: int) -> int | None:
+        val = _get_int(state, field_num)
+        return val if val else None  # 0 (UNSPECIFIED) → None
+
+    result: dict = {
+        "days_to_service": _int_or_none(3),
+        "distance_to_service_km": _int_or_none(4),
+        "service_warning": _warning(5),
+        "brake_fluid_level_warning": _warning(6),
+        "engine_coolant_level_warning": _warning(7),
+        "oil_level_warning": _warning(8),
+        "front_left_tyre_pressure_warning": _warning(9),
+        "front_right_tyre_pressure_warning": _warning(10),
+        "rear_left_tyre_pressure_warning": _warning(11),
+        "rear_right_tyre_pressure_warning": _warning(12),
+        "washer_fluid_level_warning": _warning(13),
+        "low_voltage_battery_warning": _warning(38),
+        "front_left_tyre_pressure_kpa": _pressure(39),
+        "front_right_tyre_pressure_kpa": _pressure(40),
+        "rear_left_tyre_pressure_kpa": _pressure(41),
+        "rear_right_tyre_pressure_kpa": _pressure(42),
+        "front_tyres_reference_pressure_kpa": _pressure(43),
+        "rear_tyres_reference_pressure_kpa": _pressure(44),
+    }
+    for field_num, key in _LIGHT_WARNING_FIELDS:
+        result[key] = _warning(field_num)
+
+    return result
+
+
 def _parse_location_response(data: bytes) -> dict:
     """Parse GetLastKnownLocation response.
 
@@ -426,6 +548,28 @@ class CepClient:
         except grpc.RpcError as err:
             _LOGGER.warning("CEP GetLatestAvailability failed: %s", err)
             raise
+
+    def get_health(self, vin: str) -> dict:
+        """Get vehicle health state (tyre pressure, fluid levels, service info).
+
+        GetHealth is SERVER_STREAMING (no GetLatest* unary variant).
+        Takes the first response from the stream and returns parsed data.
+        """
+        channel = self._get_channel()
+        method = channel.unary_stream(
+            _METHOD_GET_HEALTH,
+            request_serializer=_identity_serialize,
+            response_deserializer=_identity_deserialize,
+        )
+        try:
+            responses = method(_build_vin_request(vin), metadata=self._metadata(vin), timeout=30)
+            for response in responses:
+                return _parse_health_response(response)
+        except grpc.RpcError as err:
+            _LOGGER.warning("CEP GetHealth failed: %s", err)
+            raise
+        # Stream yielded no responses
+        return _parse_health_response(b"")
 
     def get_location(self, vin: str) -> dict:
         """Get last known vehicle location."""

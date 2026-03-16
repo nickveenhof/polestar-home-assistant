@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfTime
+from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfPressure, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -22,6 +22,7 @@ from .const import (
     CLIMATE_RUNNING_STATUS_MAP,
     DOMAIN,
     HEATING_INTENSITY_MAP,
+    SERVICE_WARNING_MAP,
     UNAVAILABLE_REASON_MAP,
     USAGE_MODE_MAP,
 )
@@ -117,11 +118,46 @@ def _estimated_range(data: dict, vin: str) -> int | None:
     return cep_battery.get("estimated_range_km")
 
 
+def _health_pressure(key: str) -> Callable[[dict, str], float | None]:
+    """Create a value_fn for a tyre pressure sensor (kPa)."""
+
+    def _value_fn(data: dict, vin: str) -> float | None:
+        health = data.get("health", {}).get(vin)
+        if health is None:
+            return None
+        return health.get(key)
+
+    return _value_fn
+
+
+def _health_int(key: str) -> Callable[[dict, str], int | None]:
+    """Create a value_fn for a health integer sensor (days/distance to service)."""
+
+    def _value_fn(data: dict, vin: str) -> int | None:
+        health = data.get("health", {}).get(vin)
+        if health is None:
+            return None
+        return health.get(key)
+
+    return _value_fn
+
+
+def _service_warning(data: dict, vin: str) -> str | None:
+    health = data.get("health", {}).get(vin)
+    if health is None:
+        return None
+    val = health.get("service_warning")
+    if val is None:
+        return None
+    return SERVICE_WARNING_MAP.get(val)
+
+
 # Options lists for ENUM sensors
 _CLIMATE_STATUS_OPTIONS = list(CLIMATE_RUNNING_STATUS_MAP.values())
 _HEATING_INTENSITY_OPTIONS = list(HEATING_INTENSITY_MAP.values())
 _USAGE_MODE_OPTIONS = list(USAGE_MODE_MAP.values())
 _UNAVAILABLE_REASON_OPTIONS = list(UNAVAILABLE_REASON_MAP.values())
+_SERVICE_WARNING_OPTIONS = list(SERVICE_WARNING_MAP.values())
 
 SENSOR_DESCRIPTIONS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
@@ -217,6 +253,68 @@ SENSOR_DESCRIPTIONS: tuple[PolestarSensorDescription, ...] = (
         options=_UNAVAILABLE_REASON_OPTIONS,
         entity_registry_enabled_default=False,
         value_fn=_unavailable_reason,
+    ),
+    # -- Health: Tyre pressure sensors --
+    PolestarSensorDescription(
+        key="front_left_tyre_pressure",
+        translation_key="front_left_tyre_pressure",
+        native_unit_of_measurement=UnitOfPressure.KPA,
+        device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=_health_pressure("front_left_tyre_pressure_kpa"),
+    ),
+    PolestarSensorDescription(
+        key="front_right_tyre_pressure",
+        translation_key="front_right_tyre_pressure",
+        native_unit_of_measurement=UnitOfPressure.KPA,
+        device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=_health_pressure("front_right_tyre_pressure_kpa"),
+    ),
+    PolestarSensorDescription(
+        key="rear_left_tyre_pressure",
+        translation_key="rear_left_tyre_pressure",
+        native_unit_of_measurement=UnitOfPressure.KPA,
+        device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=_health_pressure("rear_left_tyre_pressure_kpa"),
+    ),
+    PolestarSensorDescription(
+        key="rear_right_tyre_pressure",
+        translation_key="rear_right_tyre_pressure",
+        native_unit_of_measurement=UnitOfPressure.KPA,
+        device_class=SensorDeviceClass.PRESSURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        value_fn=_health_pressure("rear_right_tyre_pressure_kpa"),
+    ),
+    # -- Health: Service info --
+    PolestarSensorDescription(
+        key="days_to_service",
+        translation_key="days_to_service",
+        native_unit_of_measurement=UnitOfTime.DAYS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+        value_fn=_health_int("days_to_service"),
+    ),
+    PolestarSensorDescription(
+        key="distance_to_service",
+        translation_key="distance_to_service",
+        native_unit_of_measurement=UnitOfLength.KILOMETERS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+        value_fn=_health_int("distance_to_service_km"),
+    ),
+    PolestarSensorDescription(
+        key="service_warning",
+        translation_key="service_warning",
+        device_class=SensorDeviceClass.ENUM,
+        options=_SERVICE_WARNING_OPTIONS,
+        entity_registry_enabled_default=False,
+        value_fn=_service_warning,
     ),
 )
 

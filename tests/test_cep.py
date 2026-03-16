@@ -13,11 +13,13 @@ from custom_components.polestar_soc.cep import (
     _parse_battery_response,
     _parse_climate_response,
     _parse_exterior_response,
+    _parse_health_response,
     _parse_location_response,
 )
 from custom_components.polestar_soc.proto import (
     _decode_message,
     _encode_field_bytes,
+    _encode_field_fixed32,
     _encode_field_varint,
     _get_submessage,
 )
@@ -430,3 +432,180 @@ class TestParseAvailabilityResponse:
         state = _get_submessage(outer, 3)
         assert state is not None
         assert 3 in state  # availability_status field
+
+
+# ---------------------------------------------------------------------------
+# Health tests
+# ---------------------------------------------------------------------------
+
+
+def _build_health_state(varint_fields: dict[int, int], float_fields: dict[int, float]) -> bytes:
+    """Build a Health sub-message from varint and float (fixed32) fields."""
+    data = b""
+    for field_num in sorted(varint_fields):
+        data += _encode_field_varint(field_num, varint_fields[field_num])
+    for field_num in sorted(float_fields):
+        data += _encode_field_fixed32(field_num, float_fields[field_num])
+    return data
+
+
+def _build_health_payload(
+    vin: str, varint_fields: dict[int, int], float_fields: dict[int, float]
+) -> bytes:
+    """Build a synthetic GetHealth response with two-level envelope."""
+    state_bytes = _build_health_state(varint_fields, float_fields)
+    data = _encode_field_bytes(2, vin.encode("utf-8"))
+    data += _encode_field_bytes(3, state_bytes)
+    return data
+
+
+# Full health response: service info, tyre warnings, fluid warnings, pressures
+HEALTH_FULL = _build_health_payload(
+    TEST_VIN,
+    varint_fields={
+        3: 180,  # days_to_service
+        4: 12000,  # distance_to_service_km
+        5: 1,  # service_warning: NO_WARNING
+        6: 1,  # brake_fluid_level_warning: NO_WARNING
+        7: 1,  # engine_coolant_level_warning: NO_WARNING
+        8: 1,  # oil_level_warning: NO_WARNING
+        9: 1,  # front_left_tyre_pressure_warning: NO_WARNING
+        10: 3,  # front_right_tyre_pressure_warning: LOW
+        11: 1,  # rear_left_tyre_pressure_warning: NO_WARNING
+        12: 2,  # rear_right_tyre_pressure_warning: VERY_LOW
+        13: 1,  # washer_fluid_level_warning: NO_WARNING
+        14: 1,  # brake_light_left_warning: NO_WARNING
+        15: 2,  # brake_light_center_warning: FAILURE
+        38: 1,  # low_voltage_battery_warning: NO_WARNING
+    },
+    float_fields={
+        39: 240.0,  # front_left_tyre_pressure_kpa
+        40: 210.5,  # front_right_tyre_pressure_kpa
+        41: 245.0,  # rear_left_tyre_pressure_kpa
+        42: 190.3,  # rear_right_tyre_pressure_kpa
+        43: 240.0,  # front_tyres_reference_pressure_kpa
+        44: 250.0,  # rear_tyres_reference_pressure_kpa
+    },
+)
+
+# Minimal: only tyre pressures, no warnings set
+HEALTH_MINIMAL = _build_health_payload(
+    TEST_VIN,
+    varint_fields={},
+    float_fields={
+        39: 235.0,
+        40: 235.0,
+        41: 250.0,
+        42: 250.0,
+    },
+)
+
+
+class TestParseHealthResponse:
+    def test_full_response(self):
+        result = _parse_health_response(HEALTH_FULL)
+        # Service info
+        assert result["days_to_service"] == 180
+        assert result["distance_to_service_km"] == 12000
+        assert result["service_warning"] == 1  # NO_WARNING
+        # Fluid warnings
+        assert result["brake_fluid_level_warning"] == 1  # NO_WARNING
+        assert result["engine_coolant_level_warning"] == 1  # NO_WARNING
+        assert result["oil_level_warning"] == 1  # NO_WARNING
+        assert result["washer_fluid_level_warning"] == 1  # NO_WARNING
+        # Tyre pressure warnings
+        assert result["front_left_tyre_pressure_warning"] == 1  # NO_WARNING
+        assert result["front_right_tyre_pressure_warning"] == 3  # LOW
+        assert result["rear_left_tyre_pressure_warning"] == 1  # NO_WARNING
+        assert result["rear_right_tyre_pressure_warning"] == 2  # VERY_LOW
+        # 12V battery
+        assert result["low_voltage_battery_warning"] == 1  # NO_WARNING
+        # Light warnings
+        assert result["brake_light_left_warning"] == 1  # NO_WARNING
+        assert result["brake_light_center_warning"] == 2  # FAILURE
+
+    def test_tyre_pressure_floats(self):
+        result = _parse_health_response(HEALTH_FULL)
+        assert result["front_left_tyre_pressure_kpa"] == pytest.approx(240.0, abs=0.2)
+        assert result["front_right_tyre_pressure_kpa"] == pytest.approx(210.5, abs=0.2)
+        assert result["rear_left_tyre_pressure_kpa"] == pytest.approx(245.0, abs=0.2)
+        assert result["rear_right_tyre_pressure_kpa"] == pytest.approx(190.3, abs=0.2)
+        assert result["front_tyres_reference_pressure_kpa"] == pytest.approx(240.0, abs=0.2)
+        assert result["rear_tyres_reference_pressure_kpa"] == pytest.approx(250.0, abs=0.2)
+
+    def test_minimal_response_missing_warnings(self):
+        """Response with only float fields returns None for varint warnings."""
+        result = _parse_health_response(HEALTH_MINIMAL)
+        assert result["front_left_tyre_pressure_kpa"] == pytest.approx(235.0, abs=0.2)
+        assert result["days_to_service"] is None
+        assert result["service_warning"] is None
+        assert result["front_left_tyre_pressure_warning"] is None
+        assert result["washer_fluid_level_warning"] is None
+        assert result["low_voltage_battery_warning"] is None
+
+    def test_empty_response(self):
+        result = _parse_health_response(b"")
+        assert result["front_left_tyre_pressure_kpa"] is None
+        assert result["rear_right_tyre_pressure_kpa"] is None
+        assert result["days_to_service"] is None
+        assert result["service_warning"] is None
+        assert result["front_left_tyre_pressure_warning"] is None
+        assert result["washer_fluid_level_warning"] is None
+        assert result["low_voltage_battery_warning"] is None
+        assert result["brake_light_left_warning"] is None
+        assert result["front_tyres_reference_pressure_kpa"] is None
+
+    def test_missing_state_submessage(self):
+        """Response with VIN but no field 3 returns all None."""
+        data = _encode_field_bytes(2, TEST_VIN.encode("utf-8"))
+        result = _parse_health_response(data)
+        assert result["front_left_tyre_pressure_kpa"] is None
+        assert result["days_to_service"] is None
+        assert result["front_left_tyre_pressure_warning"] is None
+
+    def test_two_level_envelope(self):
+        """Verify outer envelope has field 2=VIN and field 3=Health state."""
+        outer = _decode_message(HEALTH_FULL)
+        assert outer[2][0] == TEST_VIN.encode("utf-8")
+        assert isinstance(outer[3][0], (bytes, bytearray))
+        state = _get_submessage(outer, 3)
+        assert state is not None
+        assert 3 in state  # days_to_service field
+
+    def test_unspecified_enum_returns_none(self):
+        """Enum value 0 (UNSPECIFIED) returns None."""
+        payload = _build_health_payload(
+            TEST_VIN,
+            varint_fields={5: 0, 9: 0, 13: 0, 38: 0},
+            float_fields={},
+        )
+        result = _parse_health_response(payload)
+        assert result["service_warning"] is None
+        assert result["front_left_tyre_pressure_warning"] is None
+        assert result["washer_fluid_level_warning"] is None
+        assert result["low_voltage_battery_warning"] is None
+
+    def test_zero_days_to_service_is_not_none(self):
+        """days_to_service=0 should return 0, not None."""
+        payload = _build_health_payload(
+            TEST_VIN,
+            varint_fields={3: 0, 4: 0},
+            float_fields={},
+        )
+        result = _parse_health_response(payload)
+        assert result["days_to_service"] == 0
+        assert result["distance_to_service_km"] == 0
+
+    def test_pressure_rounding(self):
+        """Verify tyre pressure values are rounded to 1 decimal."""
+        payload = _build_health_payload(
+            TEST_VIN,
+            varint_fields={},
+            float_fields={39: 240.123},
+        )
+        result = _parse_health_response(payload)
+        # IEEE 754 single-precision may not store 240.123 exactly,
+        # but the result should be rounded to 1 decimal place
+        val = result["front_left_tyre_pressure_kpa"]
+        assert val is not None
+        assert val == round(val, 1)

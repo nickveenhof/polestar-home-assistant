@@ -16,7 +16,17 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import ALARM_STATUS_MAP, DOMAIN, OPEN_STATUS_MAP, UNAVAILABLE_REASON_MAP
+from .const import (
+    ALARM_STATUS_MAP,
+    DOMAIN,
+    EXTERIOR_LIGHT_WARNING_MAP,
+    FLUID_WARNING_MAP,
+    LOW_VOLTAGE_BATTERY_WARNING_MAP,
+    OIL_LEVEL_WARNING_MAP,
+    OPEN_STATUS_MAP,
+    TYRE_PRESSURE_WARNING_MAP,
+    UNAVAILABLE_REASON_MAP,
+)
 from .coordinator import PolestarCoordinator
 
 
@@ -80,6 +90,91 @@ def _availability_extra_attrs(data: dict, vin: str) -> dict | None:
     reason_val = availability.get("unavailable_reason")
     reason = UNAVAILABLE_REASON_MAP.get(reason_val) if reason_val else None
     return {"unavailable_reason": reason}
+
+
+# ---------------------------------------------------------------------------
+# Health warning helpers
+# ---------------------------------------------------------------------------
+
+
+def _health_warning_is_on(
+    warning_key: str, *, threshold: int = 2
+) -> Callable[[dict, str], bool | None]:
+    """Create an is_on_fn for a health warning field.
+
+    Returns True when warning value >= threshold (default 2, meaning any
+    non-OK warning state). Returns None when data is missing or UNSPECIFIED(0).
+    """
+
+    def _fn(data: dict, vin: str) -> bool | None:
+        health = data.get("health", {}).get(vin)
+        if health is None:
+            return None
+        val = health.get(warning_key)
+        if val is None:
+            return None
+        return val >= threshold
+
+    return _fn
+
+
+def _health_warning_exact_is_on(
+    warning_key: str, on_value: int
+) -> Callable[[dict, str], bool | None]:
+    """Create an is_on_fn that triggers on a specific warning value."""
+
+    def _fn(data: dict, vin: str) -> bool | None:
+        health = data.get("health", {}).get(vin)
+        if health is None:
+            return None
+        val = health.get(warning_key)
+        if val is None:
+            return None
+        return val == on_value
+
+    return _fn
+
+
+def _health_warning_attrs(
+    warning_key: str, label_map: dict[int, str | None]
+) -> Callable[[dict, str], dict | None]:
+    """Create an extra_attrs_fn for a health warning binary sensor."""
+
+    def _fn(data: dict, vin: str) -> dict | None:
+        health = data.get("health", {}).get(vin)
+        if health is None:
+            return None
+        val = health.get(warning_key)
+        if val is None:
+            return None
+        label = label_map.get(val, f"Unknown ({val})")
+        if label is None:
+            return None
+        return {"raw_state": label}
+
+    return _fn
+
+
+def _tyre_warning_attrs(warning_key: str, pressure_key: str) -> Callable[[dict, str], dict | None]:
+    """Create an extra_attrs_fn for tyre pressure warning (includes kPa value)."""
+
+    def _fn(data: dict, vin: str) -> dict | None:
+        health = data.get("health", {}).get(vin)
+        if health is None:
+            return None
+        val = health.get(warning_key)
+        if val is None:
+            return None
+        label = TYRE_PRESSURE_WARNING_MAP.get(val, f"Unknown ({val})")
+        if label is None:
+            return None
+        attrs: dict = {"raw_state": label}
+        pressure = health.get(pressure_key)
+        if pressure is not None:
+            attrs["pressure_kpa"] = pressure
+        return attrs
+
+    return _fn
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +276,284 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[PolestarBinarySensorDescription, ...] = (
         device_class=BinarySensorDeviceClass.SAFETY,
         entity_registry_enabled_default=False,
         is_on_fn=_alarm_is_on,
+    ),
+    # -- Health: Tyre pressure warnings (enabled by default) --
+    PolestarBinarySensorDescription(
+        key="front_left_tyre_pressure_warning",
+        translation_key="front_left_tyre_pressure_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        is_on_fn=_health_warning_is_on("front_left_tyre_pressure_warning"),
+        extra_attrs_fn=_tyre_warning_attrs(
+            "front_left_tyre_pressure_warning", "front_left_tyre_pressure_kpa"
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="front_right_tyre_pressure_warning",
+        translation_key="front_right_tyre_pressure_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        is_on_fn=_health_warning_is_on("front_right_tyre_pressure_warning"),
+        extra_attrs_fn=_tyre_warning_attrs(
+            "front_right_tyre_pressure_warning", "front_right_tyre_pressure_kpa"
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="rear_left_tyre_pressure_warning",
+        translation_key="rear_left_tyre_pressure_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        is_on_fn=_health_warning_is_on("rear_left_tyre_pressure_warning"),
+        extra_attrs_fn=_tyre_warning_attrs(
+            "rear_left_tyre_pressure_warning", "rear_left_tyre_pressure_kpa"
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="rear_right_tyre_pressure_warning",
+        translation_key="rear_right_tyre_pressure_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        is_on_fn=_health_warning_is_on("rear_right_tyre_pressure_warning"),
+        extra_attrs_fn=_tyre_warning_attrs(
+            "rear_right_tyre_pressure_warning", "rear_right_tyre_pressure_kpa"
+        ),
+    ),
+    # -- Health: Fluid & battery warnings (enabled by default) --
+    PolestarBinarySensorDescription(
+        key="washer_fluid_level_warning",
+        translation_key="washer_fluid_level_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        is_on_fn=_health_warning_exact_is_on("washer_fluid_level_warning", 2),
+        extra_attrs_fn=_health_warning_attrs("washer_fluid_level_warning", FLUID_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="low_voltage_battery_warning",
+        translation_key="low_voltage_battery_warning",
+        device_class=BinarySensorDeviceClass.BATTERY,
+        is_on_fn=_health_warning_exact_is_on("low_voltage_battery_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "low_voltage_battery_warning", LOW_VOLTAGE_BATTERY_WARNING_MAP
+        ),
+    ),
+    # -- Health: Disabled by default --
+    PolestarBinarySensorDescription(
+        key="brake_fluid_level_warning",
+        translation_key="brake_fluid_level_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_is_on("brake_fluid_level_warning"),
+        extra_attrs_fn=_health_warning_attrs("brake_fluid_level_warning", FLUID_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="engine_coolant_level_warning",
+        translation_key="engine_coolant_level_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_is_on("engine_coolant_level_warning"),
+        extra_attrs_fn=_health_warning_attrs("engine_coolant_level_warning", FLUID_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="oil_level_warning",
+        translation_key="oil_level_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_is_on("oil_level_warning"),
+        extra_attrs_fn=_health_warning_attrs("oil_level_warning", OIL_LEVEL_WARNING_MAP),
+    ),
+    # -- Health: Light warnings (disabled by default) --
+    PolestarBinarySensorDescription(
+        key="brake_light_left_warning",
+        translation_key="brake_light_left_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("brake_light_left_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "brake_light_left_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="brake_light_center_warning",
+        translation_key="brake_light_center_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("brake_light_center_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "brake_light_center_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="brake_light_right_warning",
+        translation_key="brake_light_right_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("brake_light_right_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "brake_light_right_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="fog_light_front_warning",
+        translation_key="fog_light_front_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("fog_light_front_warning", 2),
+        extra_attrs_fn=_health_warning_attrs("fog_light_front_warning", EXTERIOR_LIGHT_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="fog_light_rear_warning",
+        translation_key="fog_light_rear_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("fog_light_rear_warning", 2),
+        extra_attrs_fn=_health_warning_attrs("fog_light_rear_warning", EXTERIOR_LIGHT_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="position_light_front_left_warning",
+        translation_key="position_light_front_left_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("position_light_front_left_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "position_light_front_left_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="position_light_front_right_warning",
+        translation_key="position_light_front_right_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("position_light_front_right_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "position_light_front_right_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="position_light_rear_left_warning",
+        translation_key="position_light_rear_left_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("position_light_rear_left_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "position_light_rear_left_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="position_light_rear_right_warning",
+        translation_key="position_light_rear_right_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("position_light_rear_right_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "position_light_rear_right_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="high_beam_left_warning",
+        translation_key="high_beam_left_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("high_beam_left_warning", 2),
+        extra_attrs_fn=_health_warning_attrs("high_beam_left_warning", EXTERIOR_LIGHT_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="high_beam_right_warning",
+        translation_key="high_beam_right_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("high_beam_right_warning", 2),
+        extra_attrs_fn=_health_warning_attrs("high_beam_right_warning", EXTERIOR_LIGHT_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="low_beam_left_warning",
+        translation_key="low_beam_left_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("low_beam_left_warning", 2),
+        extra_attrs_fn=_health_warning_attrs("low_beam_left_warning", EXTERIOR_LIGHT_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="low_beam_right_warning",
+        translation_key="low_beam_right_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("low_beam_right_warning", 2),
+        extra_attrs_fn=_health_warning_attrs("low_beam_right_warning", EXTERIOR_LIGHT_WARNING_MAP),
+    ),
+    PolestarBinarySensorDescription(
+        key="daytime_running_light_left_warning",
+        translation_key="daytime_running_light_left_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("daytime_running_light_left_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "daytime_running_light_left_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="daytime_running_light_right_warning",
+        translation_key="daytime_running_light_right_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("daytime_running_light_right_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "daytime_running_light_right_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="turn_indication_front_left_warning",
+        translation_key="turn_indication_front_left_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("turn_indication_front_left_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "turn_indication_front_left_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="turn_indication_front_right_warning",
+        translation_key="turn_indication_front_right_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("turn_indication_front_right_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "turn_indication_front_right_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="turn_indication_rear_left_warning",
+        translation_key="turn_indication_rear_left_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("turn_indication_rear_left_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "turn_indication_rear_left_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="turn_indication_rear_right_warning",
+        translation_key="turn_indication_rear_right_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("turn_indication_rear_right_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "turn_indication_rear_right_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="registration_plate_light_warning",
+        translation_key="registration_plate_light_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("registration_plate_light_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "registration_plate_light_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
+    ),
+    PolestarBinarySensorDescription(
+        key="side_mark_lights_warning",
+        translation_key="side_mark_lights_warning",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+        is_on_fn=_health_warning_exact_is_on("side_mark_lights_warning", 2),
+        extra_attrs_fn=_health_warning_attrs(
+            "side_mark_lights_warning", EXTERIOR_LIGHT_WARNING_MAP
+        ),
     ),
 )
 

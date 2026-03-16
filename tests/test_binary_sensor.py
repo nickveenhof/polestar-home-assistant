@@ -165,14 +165,85 @@ class TestNoneHandling:
         assert sensor.extra_state_attributes is None
 
 
+class TestHealthWarningIsOn:
+    def test_no_warning(self, sample_coordinator_data, sample_vehicle):
+        """NO_WARNING(1) → False (not a problem)."""
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "front_left_tyre_pressure_warning"
+        )
+        assert sensor.is_on is False
+
+    def test_very_low(self, sample_coordinator_data, sample_vehicle):
+        """VERY_LOW(2) → True (problem)."""
+        sample_coordinator_data["health"][VIN]["front_left_tyre_pressure_warning"] = 2
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "front_left_tyre_pressure_warning"
+        )
+        assert sensor.is_on is True
+
+    def test_low(self, sample_coordinator_data, sample_vehicle):
+        """LOW(3) → True (problem)."""
+        sample_coordinator_data["health"][VIN]["rear_right_tyre_pressure_warning"] = 3
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "rear_right_tyre_pressure_warning"
+        )
+        assert sensor.is_on is True
+
+    def test_missing_health_data(self, sample_coordinator_data, sample_vehicle):
+        sample_coordinator_data["health"] = {}
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "front_left_tyre_pressure_warning"
+        )
+        assert sensor.is_on is None
+
+    def test_tyre_warning_extra_attrs(self, sample_coordinator_data, sample_vehicle):
+        sample_coordinator_data["health"][VIN]["front_left_tyre_pressure_warning"] = 2
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "front_left_tyre_pressure_warning"
+        )
+        attrs = sensor.extra_state_attributes
+        assert attrs["raw_state"] == "Very low"
+        assert attrs["pressure_kpa"] == 240.0
+
+    def test_exact_match_washer_fluid(self, sample_coordinator_data, sample_vehicle):
+        """Washer fluid uses exact match: 2=Too low → True."""
+        sample_coordinator_data["health"][VIN]["washer_fluid_level_warning"] = 2
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "washer_fluid_level_warning"
+        )
+        assert sensor.is_on is True
+
+    def test_exact_match_washer_fluid_no_warning(self, sample_coordinator_data, sample_vehicle):
+        """Washer fluid NO_WARNING(1) → False."""
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "washer_fluid_level_warning"
+        )
+        assert sensor.is_on is False
+
+    def test_light_failure(self, sample_coordinator_data, sample_vehicle):
+        """Light FAILURE(2) → True."""
+        sample_coordinator_data["health"][VIN]["brake_light_center_warning"] = 2
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "brake_light_center_warning"
+        )
+        assert sensor.is_on is True
+
+    def test_light_no_warning(self, sample_coordinator_data, sample_vehicle):
+        """Light NO_WARNING(1) → False."""
+        sensor = _make_sensor(
+            sample_coordinator_data, sample_vehicle, VIN, "brake_light_center_warning"
+        )
+        assert sensor.is_on is False
+
+
 class TestDescriptionCounts:
     def test_total_descriptions(self):
-        assert len(BINARY_SENSOR_DESCRIPTIONS) == 14
+        assert len(BINARY_SENSOR_DESCRIPTIONS) == 44
 
     def test_enabled_by_default_count(self):
         enabled = [d for d in BINARY_SENSOR_DESCRIPTIONS if d.entity_registry_enabled_default]
-        assert len(enabled) == 5  # vehicle_available + 4 doors
+        assert len(enabled) == 11  # 5 exterior + 4 tyre warnings + washer fluid + 12V battery
 
     def test_disabled_by_default_count(self):
         disabled = [d for d in BINARY_SENSOR_DESCRIPTIONS if not d.entity_registry_enabled_default]
-        assert len(disabled) == 9  # 4 windows + hood + tailgate + tank_lid + sunroof + alarm
+        assert len(disabled) == 33  # 9 exterior + 3 fluid/oil + 21 light warnings
