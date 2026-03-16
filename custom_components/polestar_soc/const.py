@@ -195,6 +195,20 @@ EXTERIOR_LIGHT_WARNING_MAP: dict[int, str | None] = {
     2: "Failure",
 }
 
+# CEP Battery enums
+CHARGER_CONNECTION_STATUS_MAP: dict[int, str] = {
+    1: "Connected",
+    2: "Disconnected",
+    3: "Fault",
+}
+
+CHARGING_TYPE_MAP: dict[int, str] = {
+    1: "Not charging",
+    2: "AC",
+    3: "DC",
+    4: "Wireless",
+}
+
 # Weekday enum (ParkingClimateTimer)
 WEEKDAY_MAP: dict[int, str] = {
     1: "Monday",

@@ -12,13 +12,14 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfPressure, UnitOfTime
+from homeassistant.const import PERCENTAGE, UnitOfLength, UnitOfPower, UnitOfPressure, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    CHARGING_TYPE_MAP,
     CLIMATE_RUNNING_STATUS_MAP,
     DOMAIN,
     HEATING_INTENSITY_MAP,
@@ -118,6 +119,30 @@ def _estimated_range(data: dict, vin: str) -> int | None:
     return cep_battery.get("estimated_range_km")
 
 
+def _charging_power(data: dict, vin: str) -> int | None:
+    cep_battery = data.get("cep_battery", {}).get(vin)
+    if cep_battery is None:
+        return None
+    return cep_battery.get("charging_power_watts")
+
+
+def _charging_type(data: dict, vin: str) -> str | None:
+    cep_battery = data.get("cep_battery", {}).get(vin)
+    if cep_battery is None:
+        return None
+    val = cep_battery.get("charging_type")
+    if val is None:
+        return None
+    return CHARGING_TYPE_MAP.get(val)
+
+
+def _estimated_range_miles(data: dict, vin: str) -> int | None:
+    cep_battery = data.get("cep_battery", {}).get(vin)
+    if cep_battery is None:
+        return None
+    return cep_battery.get("estimated_range_miles")
+
+
 def _health_pressure(key: str) -> Callable[[dict, str], float | None]:
     """Create a value_fn for a tyre pressure sensor (kPa)."""
 
@@ -158,6 +183,7 @@ _HEATING_INTENSITY_OPTIONS = list(HEATING_INTENSITY_MAP.values())
 _USAGE_MODE_OPTIONS = list(USAGE_MODE_MAP.values())
 _UNAVAILABLE_REASON_OPTIONS = list(UNAVAILABLE_REASON_MAP.values())
 _SERVICE_WARNING_OPTIONS = list(SERVICE_WARNING_MAP.values())
+_CHARGING_TYPE_OPTIONS = list(CHARGING_TYPE_MAP.values())
 
 SENSOR_DESCRIPTIONS: tuple[PolestarSensorDescription, ...] = (
     PolestarSensorDescription(
@@ -238,6 +264,30 @@ SENSOR_DESCRIPTIONS: tuple[PolestarSensorDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=_estimated_range,
+    ),
+    PolestarSensorDescription(
+        key="charging_power",
+        translation_key="charging_power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=_charging_power,
+    ),
+    PolestarSensorDescription(
+        key="charging_type",
+        translation_key="charging_type",
+        device_class=SensorDeviceClass.ENUM,
+        options=_CHARGING_TYPE_OPTIONS,
+        value_fn=_charging_type,
+    ),
+    PolestarSensorDescription(
+        key="estimated_range_miles",
+        translation_key="estimated_range_miles",
+        native_unit_of_measurement=UnitOfLength.MILES,
+        device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+        value_fn=_estimated_range_miles,
     ),
     PolestarSensorDescription(
         key="usage_mode",

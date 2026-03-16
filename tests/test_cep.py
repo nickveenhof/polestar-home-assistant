@@ -105,6 +105,7 @@ class TestParseBatteryResponse:
         assert result["estimated_charging_time_minutes"] is None  # field 5 = 0
         assert result["estimated_range_miles"] == 140
         assert result["charging_power_watts"] is None  # field 10 not in payload
+        assert result["charging_type"] == 1  # NONE (not charging)
 
     def test_raw_fields(self):
         result = _parse_battery_response(BATTERY_PAYLOAD)
@@ -124,6 +125,7 @@ class TestParseBatteryResponse:
         assert result["charging_status"] is None
         assert result["charger_connection_status"] is None
         assert result["charging_power_watts"] is None
+        assert result["charging_type"] is None
         assert result["raw_fields"] == {}
 
     def test_two_level_decode(self):

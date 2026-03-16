@@ -178,6 +178,7 @@ def _parse_battery_response(data: bytes) -> dict:
         "estimated_charging_time_minutes": None,
         "estimated_range_miles": None,
         "charging_power_watts": None,
+        "charging_type": None,
         "raw_fields": {},
     }
     if not data:
@@ -203,6 +204,7 @@ def _parse_battery_response(data: bytes) -> dict:
         "estimated_charging_time_minutes": _get_int(state, 5) or None,
         "estimated_range_miles": _get_int(state, 8) or None,
         "charging_power_watts": _get_int(state, 10) or None,
+        "charging_type": _get_int(state, 17) or None,
         "raw_fields": raw_fields,
     }
 

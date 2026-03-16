@@ -2,11 +2,14 @@
 
 from custom_components.polestar_soc.sensor import (
     _battery_soc,
+    _charging_power,
     _charging_status,
     _charging_time_remaining,
+    _charging_type,
     _climate_heating,
     _climate_status,
     _estimated_range,
+    _estimated_range_miles,
     _odometer_km,
 )
 
@@ -171,3 +174,66 @@ class TestEstimatedRange:
     def test_none_when_range_missing(self):
         data = {"cep_battery": {VIN: {"soc": 76.0}}}
         assert _estimated_range(data, VIN) is None
+
+
+# ---------------------------------------------------------------------------
+# Battery/charging sensors (CEP)
+# ---------------------------------------------------------------------------
+
+
+class TestChargingPower:
+    def test_returns_watts(self):
+        data = {"cep_battery": {VIN: {"charging_power_watts": 11000}}}
+        assert _charging_power(data, VIN) == 11000
+
+    def test_none_when_not_charging(self, sample_coordinator_data):
+        # Fixture has charging_power_watts=None (not charging)
+        assert _charging_power(sample_coordinator_data, VIN) is None
+
+    def test_none_when_no_cep_battery(self):
+        assert _charging_power({}, VIN) is None
+
+    def test_none_when_missing_key(self):
+        data = {"cep_battery": {VIN: {"soc": 76.0}}}
+        assert _charging_power(data, VIN) is None
+
+
+class TestChargingType:
+    def test_not_charging(self, sample_coordinator_data):
+        # Fixture has charging_type=1 (NONE)
+        assert _charging_type(sample_coordinator_data, VIN) == "Not charging"
+
+    def test_ac(self):
+        data = {"cep_battery": {VIN: {"charging_type": 2}}}
+        assert _charging_type(data, VIN) == "AC"
+
+    def test_dc(self):
+        data = {"cep_battery": {VIN: {"charging_type": 3}}}
+        assert _charging_type(data, VIN) == "DC"
+
+    def test_wireless(self):
+        data = {"cep_battery": {VIN: {"charging_type": 4}}}
+        assert _charging_type(data, VIN) == "Wireless"
+
+    def test_none_when_no_cep_battery(self):
+        assert _charging_type({}, VIN) is None
+
+    def test_none_when_missing_key(self):
+        data = {"cep_battery": {VIN: {"soc": 76.0}}}
+        assert _charging_type(data, VIN) is None
+
+    def test_unknown_value_returns_none(self):
+        data = {"cep_battery": {VIN: {"charging_type": 99}}}
+        assert _charging_type(data, VIN) is None
+
+
+class TestEstimatedRangeMiles:
+    def test_returns_miles(self, sample_coordinator_data):
+        assert _estimated_range_miles(sample_coordinator_data, VIN) == 140
+
+    def test_none_when_no_cep_battery(self):
+        assert _estimated_range_miles({}, VIN) is None
+
+    def test_none_when_missing_key(self):
+        data = {"cep_battery": {VIN: {"soc": 76.0}}}
+        assert _estimated_range_miles(data, VIN) is None

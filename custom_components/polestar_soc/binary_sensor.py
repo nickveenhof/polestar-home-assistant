@@ -18,6 +18,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ALARM_STATUS_MAP,
+    CHARGER_CONNECTION_STATUS_MAP,
     DOMAIN,
     EXTERIOR_LIGHT_WARNING_MAP,
     FLUID_WARNING_MAP,
@@ -90,6 +91,34 @@ def _availability_extra_attrs(data: dict, vin: str) -> dict | None:
     reason_val = availability.get("unavailable_reason")
     reason = UNAVAILABLE_REASON_MAP.get(reason_val) if reason_val else None
     return {"unavailable_reason": reason}
+
+
+# ---------------------------------------------------------------------------
+# Charger connected helpers
+# ---------------------------------------------------------------------------
+
+
+def _charger_connected_is_on(data: dict, vin: str) -> bool | None:
+    """Charger connected: True=Plugged in, False=Unplugged, None=Unknown."""
+    cep_battery = data.get("cep_battery", {}).get(vin)
+    if cep_battery is None:
+        return None
+    val = cep_battery.get("charger_connection_status")
+    if val is None:
+        return None
+    return val != 2  # True for CONNECTED(1) and FAULT(3), False for DISCONNECTED(2)
+
+
+def _charger_connected_extra_attrs(data: dict, vin: str) -> dict | None:
+    """Return charger connection status as an extra attribute."""
+    cep_battery = data.get("cep_battery", {}).get(vin)
+    if cep_battery is None:
+        return None
+    val = cep_battery.get("charger_connection_status")
+    if val is None:
+        return None
+    label = CHARGER_CONNECTION_STATUS_MAP.get(val, f"Unknown ({val})")
+    return {"raw_state": label}
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +217,13 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[PolestarBinarySensorDescription, ...] = (
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         is_on_fn=_availability_is_on,
         extra_attrs_fn=_availability_extra_attrs,
+    ),
+    PolestarBinarySensorDescription(
+        key="charger_connected",
+        translation_key="charger_connected",
+        device_class=BinarySensorDeviceClass.PLUG,
+        is_on_fn=_charger_connected_is_on,
+        extra_attrs_fn=_charger_connected_extra_attrs,
     ),
     PolestarBinarySensorDescription(
         key="front_left_door",

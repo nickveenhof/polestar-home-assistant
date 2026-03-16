@@ -66,6 +66,7 @@ def sample_cep_battery():
         "estimated_charging_time_minutes": None,
         "estimated_range_miles": 140,
         "charging_power_watts": None,
+        "charging_type": 1,
         "raw_fields": {},
     }
 
