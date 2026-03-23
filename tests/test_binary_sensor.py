@@ -238,11 +238,11 @@ class TestHealthWarningIsOn:
 
 class TestDescriptionCounts:
     def test_total_descriptions(self):
-        assert len(BINARY_SENSOR_DESCRIPTIONS) == 44
+        assert len(BINARY_SENSOR_DESCRIPTIONS) == 45
 
     def test_enabled_by_default_count(self):
         enabled = [d for d in BINARY_SENSOR_DESCRIPTIONS if d.entity_registry_enabled_default]
-        assert len(enabled) == 11  # 5 exterior + 4 tyre warnings + washer fluid + 12V battery
+        assert len(enabled) == 12  # 5 exterior + charger + 4 tyre + washer + 12V
 
     def test_disabled_by_default_count(self):
         disabled = [d for d in BINARY_SENSOR_DESCRIPTIONS if not d.entity_registry_enabled_default]

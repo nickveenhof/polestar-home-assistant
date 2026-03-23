@@ -97,6 +97,15 @@
       },
       "service_warning": {
         "name": "Service warning"
+      },
+      "charging_power": {
+        "name": "Charging power"
+      },
+      "charging_type": {
+        "name": "Charging type"
+      },
+      "estimated_range_miles": {
+        "name": "Estimated range (miles)"
       }
     },
     "number": {
@@ -303,6 +312,9 @@
       },
       "side_mark_lights_warning": {
         "name": "Side marker lights"
+      },
+      "charger_connected": {
+        "name": "Charger connected"
       }
     }
   }
