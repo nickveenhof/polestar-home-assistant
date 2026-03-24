@@ -147,6 +147,12 @@ class PolestarAPI:
             allow_redirects=False,
             timeout=HTTP_TIMEOUT,
         )
+        _LOGGER.debug(
+            "OTP submit response: status=%s, location=%s, has_success_form=%s",
+            resp.status_code,
+            resp.headers.get("Location", ""),
+            "otp-success-form" in resp.text,
+        )
         # OTP success returns a page with auto-submit form
         if "otp-success-form" in resp.text:
             action_match = re.search(
@@ -160,6 +166,11 @@ class PolestarAPI:
                 allow_redirects=False,
                 timeout=HTTP_TIMEOUT,
             )
+            _LOGGER.debug(
+                "OTP continue response: status=%s, location=%s",
+                resp.status_code,
+                resp.headers.get("Location", ""),
+            )
         return resp
 
     @staticmethod
@@ -172,6 +183,14 @@ class PolestarAPI:
         redirect_url = resp.headers.get("Location", "")
         parsed = urlparse(redirect_url)
         params = parse_qs(parsed.query)
+
+        # Check for error in redirect (e.g. failed OTP returns
+        # polestar-explore://...?error=access_denied)
+        if "error" in params:
+            error = params["error"][0]
+            error_desc = params.get("error_description", [""])[0]
+            _LOGGER.debug("Auth redirect contains error: %s (%s)", error, error_desc)
+            raise UpdateFailed(f"Authentication failed: {error_desc or error}")
 
         # Handle consent/confirmation
         if "code" not in params and "uid" in params:
@@ -189,7 +208,8 @@ class PolestarAPI:
             parsed = urlparse(redirect_url)
             params = parse_qs(parsed.query)
 
-        if "code" not in params:
+        # Only follow redirect if it is an HTTP(S) URL
+        if "code" not in params and parsed.scheme in ("http", "https"):
             resp = session.get(redirect_url, allow_redirects=False, timeout=HTTP_TIMEOUT)
             if resp.status_code in (302, 303):
                 redirect_url = resp.headers.get("Location", "")
@@ -197,6 +217,7 @@ class PolestarAPI:
                 params = parse_qs(parsed.query)
 
         if "code" not in params:
+            _LOGGER.debug("No auth code in redirect URL: %s", redirect_url)
             raise UpdateFailed("No authorization code received")
 
         return params["code"][0]
@@ -236,6 +257,12 @@ class PolestarAPI:
 
         Returns the OTP resume URL if 2FA is required, or None.
         """
+        _LOGGER.debug(
+            "OTP challenge detection: status=%s, has_ERR001=%s, has_authMessage=%s",
+            resp.status_code,
+            "ERR001" in resp.text,
+            "authMessage" in resp.text,
+        )
         if resp.status_code in (302, 303):
             return None  # No 2FA — redirect means success
         if resp.status_code != 200:
@@ -247,8 +274,25 @@ class PolestarAPI:
             resp.text,
         )
         if not action_match:
+            # Try HTML form action attribute as fallback
+            action_match = re.search(
+                r'action="(/as/[^"]+/resume/as/authorization\.ping)"',
+                resp.text,
+            )
+            _LOGGER.debug(
+                "OTP challenge: JS action not found, HTML form fallback=%s",
+                bool(action_match),
+            )
+        if not action_match:
+            # Log a snippet of the page for debugging
+            _LOGGER.debug(
+                "OTP page snippet (first 500 chars): %s",
+                resp.text[:500],
+            )
             return None
-        return OIDC_BASE_URL + action_match.group(1)
+        otp_url = OIDC_BASE_URL + action_match.group(1)
+        _LOGGER.debug("OTP challenge URL: %s", otp_url)
+        return otp_url
 
     # -- Public login methods ------------------------------------------------
 
